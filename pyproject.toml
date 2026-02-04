@@ -1,0 +1,56 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "rustyyaml"
+version = "0.1.0"
+description = "Fast, safe YAML parser for Python (Rust-powered)"
+authors = [
+    {name = "Bilal", email = "khawajabilal902@gmail.com"}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+keywords = ["yaml", "parser", "rust", "performance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/beelal-k/rustyyaml"
+Documentation = "https://rustyyaml.readthedocs.io"
+Repository = "https://github.com/beelal-k/rustyyaml"
+"Bug Tracker" = "https://github.com/beelal-k/rustyyaml/issues"
+
+[tool.maturin]
+# Tell maturin where our Python code lives
+python-source = "python"
+# The module name (what Python imports)
+module-name = "rustyyaml.rustyyaml"
+# Build features
+features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"

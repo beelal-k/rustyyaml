@@ -1,0 +1,1192 @@
+# Large configuration file (~1000+ lines)
+# Represents a production Kubernetes cluster configuration with multiple services
+
+---
+# Namespace Configuration
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+  labels:
+    environment: production
+    team: platform
+    cost-center: engineering
+  annotations:
+    description: "Production workloads namespace"
+    owner: platform-team@example.com
+
+---
+# Resource Quotas
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: production-quota
+  namespace: production
+spec:
+  hard:
+    requests.cpu: "100"
+    requests.memory: 200Gi
+    limits.cpu: "200"
+    limits.memory: 400Gi
+    persistentvolumeclaims: "50"
+    pods: "500"
+    services: "100"
+    secrets: "200"
+    configmaps: "200"
+
+---
+# Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: production-limits
+  namespace: production
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi
+      max:
+        cpu: "4"
+        memory: 8Gi
+      min:
+        cpu: 50m
+        memory: 64Mi
+    - type: Pod
+      max:
+        cpu: "16"
+        memory: 32Gi
+    - type: PersistentVolumeClaim
+      max:
+        storage: 100Gi
+      min:
+        storage: 1Gi
+
+---
+# Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal
+  namespace: production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              environment: production
+        - podSelector: {}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              environment: production
+        - podSelector: {}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+---
+# ConfigMaps
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: production
+  labels:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: config
+data:
+  application.yaml: |
+    server:
+      port: 8080
+      compression:
+        enabled: true
+        mime-types:
+          - application/json
+          - application/xml
+          - text/html
+          - text/plain
+      http2:
+        enabled: true
+    spring:
+      application:
+        name: ecommerce-api
+      profiles:
+        active: production
+      datasource:
+        hikari:
+          minimum-idle: 10
+          maximum-pool-size: 50
+          idle-timeout: 300000
+          connection-timeout: 20000
+          max-lifetime: 1200000
+      redis:
+        cluster:
+          nodes:
+            - redis-0.redis-headless:6379
+            - redis-1.redis-headless:6379
+            - redis-2.redis-headless:6379
+          max-redirects: 3
+        timeout: 2000
+        lettuce:
+          pool:
+            max-active: 50
+            max-idle: 10
+            min-idle: 5
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+      endpoint:
+        health:
+          show-details: when-authorized
+          probes:
+            enabled: true
+      metrics:
+        export:
+          prometheus:
+            enabled: true
+  nginx.conf: |
+    worker_processes auto;
+    worker_rlimit_nofile 65535;
+
+    events {
+        worker_connections 16384;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        log_format json_combined escape=json
+        '{'
+            '"time_local":"$time_local",'
+            '"remote_addr":"$remote_addr",'
+            '"remote_user":"$remote_user",'
+            '"request":"$request",'
+            '"status": "$status",'
+            '"body_bytes_sent":"$body_bytes_sent",'
+            '"request_time":"$request_time",'
+            '"http_referrer":"$http_referer",'
+            '"http_user_agent":"$http_user_agent",'
+            '"request_id":"$request_id"'
+        '}';
+
+        access_log /var/log/nginx/access.log json_combined;
+        error_log /var/log/nginx/error.log warn;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+
+        gzip on;
+        gzip_vary on;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
+
+        upstream backend {
+            least_conn;
+            keepalive 32;
+            server api-service:8080 weight=5;
+            server api-service:8080 weight=5 backup;
+        }
+
+        server {
+            listen 80;
+            listen [::]:80;
+            server_name _;
+
+            location /health {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+
+            location / {
+                proxy_pass http://backend;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_set_header X-Request-ID $request_id;
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 60s;
+                proxy_read_timeout 60s;
+                proxy_buffering on;
+                proxy_buffer_size 4k;
+                proxy_buffers 8 4k;
+            }
+        }
+    }
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: production
+data:
+  fluent.conf: |
+    <source>
+      @type tail
+      path /var/log/containers/*.log
+      pos_file /var/log/fluentd-containers.log.pos
+      tag kubernetes.*
+      read_from_head true
+      <parse>
+        @type json
+        time_key time
+        time_format %Y-%m-%dT%H:%M:%S.%NZ
+      </parse>
+    </source>
+
+    <filter kubernetes.**>
+      @type kubernetes_metadata
+      @id filter_kube_metadata
+      kubernetes_url "#{ENV['KUBERNETES_SERVICE_HOST']}:#{ENV['KUBERNETES_SERVICE_PORT']}"
+      verify_ssl true
+      ca_file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file /var/run/secrets/kubernetes.io/serviceaccount/token
+    </filter>
+
+    <match kubernetes.**>
+      @type elasticsearch
+      @id out_es
+      host elasticsearch.logging
+      port 9200
+      logstash_format true
+      logstash_prefix kubernetes
+      include_tag_key true
+      type_name _doc
+      <buffer>
+        @type file
+        path /var/log/fluentd-buffers/kubernetes.system.buffer
+        flush_mode interval
+        retry_type exponential_backoff
+        flush_thread_count 2
+        flush_interval 5s
+        retry_forever true
+        retry_max_interval 30
+        chunk_limit_size 2M
+        queue_limit_length 8
+        overflow_action block
+      </buffer>
+    </match>
+
+---
+# Secrets (base64 encoded placeholders)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: production
+type: Opaque
+data:
+  username: YWRtaW4=
+  password: cGFzc3dvcmQxMjM=
+  connection-string: cG9zdGdyZXNxbDovL2FkbWluOnBhc3N3b3JkMTIzQGRiLXByaW1hcnk6NTQzMi9lY29tbWVyY2U=
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-credentials
+  namespace: production
+type: Opaque
+data:
+  password: cmVkaXNwYXNzMTIz
+  sentinel-password: c2VudGluZWxwYXNz
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jwt-keys
+  namespace: production
+type: Opaque
+data:
+  private-key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+  public-key: LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0K
+
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ecommerce-api
+  namespace: production
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/ecommerce-api-role
+
+---
+# RBAC
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ecommerce-api-role
+  namespace: production
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ecommerce-api-binding
+  namespace: production
+subjects:
+  - kind: ServiceAccount
+    name: ecommerce-api
+    namespace: production
+roleRef:
+  kind: Role
+  name: ecommerce-api-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-storage
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+# API Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  namespace: production
+  labels:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: api
+    app.kubernetes.io/version: "2.5.0"
+  annotations:
+    kubernetes.io/change-cause: "Deploy version 2.5.0"
+spec:
+  replicas: 5
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ecommerce
+        app.kubernetes.io/component: api
+        app.kubernetes.io/version: "2.5.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+        sidecar.istio.io/inject: "true"
+    spec:
+      serviceAccountName: ecommerce-api
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values:
+                      - ecommerce
+                  - key: app.kubernetes.io/component
+                    operator: In
+                    values:
+                      - api
+              topologyKey: kubernetes.io/hostname
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: ecommerce
+                topologyKey: topology.kubernetes.io/zone
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-type
+                    operator: In
+                    values:
+                      - application
+                      - general
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 50
+              preference:
+                matchExpressions:
+                  - key: instance-type
+                    operator: In
+                    values:
+                      - m5.xlarge
+                      - m5.2xlarge
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ecommerce
+              app.kubernetes.io/component: api
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z db-primary 5432; do
+                echo "Waiting for database..."
+                sleep 2
+              done
+              echo "Database is ready"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+        - name: wait-for-redis
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z redis-headless 6379; do
+                echo "Waiting for Redis..."
+                sleep 2
+              done
+              echo "Redis is ready"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+      containers:
+        - name: api
+          image: registry.example.com/ecommerce/api:2.5.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "production"
+            - name: SERVER_PORT
+              value: "8080"
+            - name: JAVA_OPTS
+              value: "-Xms512m -Xmx2048m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication"
+            - name: DB_HOST
+              value: "db-primary"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "ecommerce"
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: password
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: password
+            - name: JWT_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: jwt-keys
+                  key: private-key
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          envFrom:
+            - configMapRef:
+                name: app-env-config
+                optional: true
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+              ephemeral-storage: 500Mi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+              ephemeral-storage: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - sleep 15
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config
+              readOnly: true
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: logs-volume
+              mountPath: /var/log/app
+        - name: fluentd-sidecar
+          image: fluent/fluentd:v1.16-1
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          volumeMounts:
+            - name: logs-volume
+              mountPath: /var/log/app
+              readOnly: true
+            - name: fluentd-config-volume
+              mountPath: /fluentd/etc
+      volumes:
+        - name: config-volume
+          configMap:
+            name: app-config
+        - name: fluentd-config-volume
+          configMap:
+            name: fluentd-config
+        - name: tmp-volume
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: logs-volume
+          emptyDir:
+            sizeLimit: 500Mi
+      imagePullSecrets:
+        - name: registry-credentials
+
+---
+# Worker Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-deployment
+  namespace: production
+  labels:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/version: "2.5.0"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ecommerce
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/version: "2.5.0"
+    spec:
+      serviceAccountName: ecommerce-api
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: worker
+          image: registry.example.com/ecommerce/worker:2.5.0
+          command:
+            - /app/worker
+          args:
+            - --queue=order_processing,email_notifications,sms_notifications
+            - --concurrency=10
+            - --log-level=info
+          env:
+            - name: DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: connection-string
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: password
+            - name: RABBITMQ_URL
+              value: "amqp://app:password@rabbitmq:5672/ecommerce"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          livenessProbe:
+            exec:
+              command:
+                - /app/healthcheck
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config
+      volumes:
+        - name: config-volume
+          configMap:
+            name: app-config
+
+---
+# Scheduler Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scheduler-deployment
+  namespace: production
+  labels:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ecommerce
+        app.kubernetes.io/component: scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: registry.example.com/ecommerce/scheduler:2.5.0
+          env:
+            - name: REDIS_URL
+              value: "redis://redis-headless:6379"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: production
+  labels:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: api
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: api
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service-headless
+  namespace: production
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: ecommerce
+    app.kubernetes.io/component: api
+
+---
+# Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: production
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Request-ID: $request_id";
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.example.com
+        - www.api.example.com
+      secretName: api-tls-secret
+  rules:
+    - host: api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 80
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 80
+          - path: /v2
+            pathType: Prefix
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 80
+
+---
+# HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-deployment
+  minReplicas: 5
+  maxReplicas: 50
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 10
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: 1000
+    - type: External
+      external:
+        metric:
+          name: rabbitmq_queue_messages
+          selector:
+            matchLabels:
+              queue: order_processing
+        target:
+          type: Value
+          value: "100"
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker-hpa
+  namespace: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker-deployment
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: rabbitmq_queue_messages_ready
+        target:
+          type: AverageValue
+          averageValue: "50"
+
+---
+# PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: production
+spec:
+  minAvailable: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce
+      app.kubernetes.io/component: api
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: worker-pdb
+  namespace: production
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce
+      app.kubernetes.io/component: worker
+
+---
+# ServiceMonitor (Prometheus Operator)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-monitor
+  namespace: production
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ecommerce
+      app.kubernetes.io/component: api
+  endpoints:
+    - port: metrics
+      interval: 15s
+      path: /metrics
+      scheme: http
+      tlsConfig:
+        insecureSkipVerify: true
+  namespaceSelector:
+    matchNames:
+      - production
+
+---
+# PrometheusRule (Alerting)
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-alerts
+  namespace: production
+  labels:
+    release: prometheus
+spec:
+  groups:
+    - name: api-alerts
+      interval: 30s
+      rules:
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_server_requests_seconds_count{namespace="production",status=~"5.."}[5m]))
+            /
+            sum(rate(http_server_requests_seconds_count{namespace="production"}[5m]))
+            > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "High error rate in production API"
+            description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+            runbook_url: https://wiki.example.com/runbooks/high-error-rate
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.99, sum(rate(http_server_requests_seconds_bucket{namespace="production"}[5m])) by (le))
+            > 2
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High latency in production API"
+            description: "P99 latency is {{ $value }}s over the last 10 minutes"
+        - alert: PodCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="production"}[1h]) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash looping"
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_ready{namespace="production",condition="true"} == 0
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} not ready for 15 minutes"
+        - alert: HighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{namespace="production",container!=""}
+            /
+            container_spec_memory_limit_bytes{namespace="production",container!=""}
+            > 0.9
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container {{ $labels.container }} using >90% memory"
+        - alert: HighCPUUsage
+          expr: |
+            sum(rate(container_cpu_usage_seconds_total{namespace="production",container!=""}[5m])) by (pod, container)
+            /
+            sum(container_spec_cpu_quota{namespace="production",container!=""}/container_spec_cpu_period{namespace="production",container!=""}) by (pod, container)
+            > 0.9
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container {{ $labels.container }} using >90% CPU"
+
+---
+# CronJob for maintenance
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: production
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: registry.example.com/tools/pg-backup:1.0
+              env:
+                - name: PGHOST
+                  value: db-primary
+                - name: PGUSER
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-credentials
+                      key: username
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-credentials
+                      key: password
+                - name: S3_BUCKET
+                  value: company-db-backups
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-old-data
+  namespace: production
+spec:
+  schedule: "0 4 * * 0"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: cleanup
+              image: registry.example.com/ecommerce/tools:2.5.0
+              command:
+                - /app/cleanup
+              args:
+                - --older-than=90d
+                - --tables=audit_logs,session_history,temp_uploads
+              env:
+                - name: DB_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-credentials
+                      key: connection-string
+              resources:
+                requests:
+                  cpu: 200m
+                  memory: 512Mi
+                limits:
+                  cpu: 1000m
+                  memory: 2Gi

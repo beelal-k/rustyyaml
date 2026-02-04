@@ -1,0 +1,206 @@
+# Medium configuration file (~200 lines)
+# Represents a microservices application configuration
+
+application:
+  name: ecommerce-platform
+  version: "2.5.0"
+  environment: production
+  debug: false
+  maintenance_mode: false
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  workers: 8
+  timeout: 60
+  keep_alive: 120
+  max_connections: 10000
+  ssl:
+    enabled: true
+    cert_file: /etc/ssl/certs/server.crt
+    key_file: /etc/ssl/private/server.key
+    protocols:
+      - TLSv1.2
+      - TLSv1.3
+
+database:
+  primary:
+    driver: postgresql
+    host: db-primary.internal
+    port: 5432
+    name: ecommerce_prod
+    username: app_user
+    pool:
+      min_size: 10
+      max_size: 50
+      timeout: 30
+      idle_timeout: 600
+    ssl_mode: require
+  replica:
+    driver: postgresql
+    host: db-replica.internal
+    port: 5432
+    name: ecommerce_prod
+    username: app_readonly
+    pool:
+      min_size: 5
+      max_size: 25
+      timeout: 30
+
+cache:
+  redis:
+    host: redis-cluster.internal
+    port: 6379
+    db: 0
+    password_env: REDIS_PASSWORD
+    cluster_mode: true
+    nodes:
+      - redis-1.internal:6379
+      - redis-2.internal:6379
+      - redis-3.internal:6379
+    ttl_defaults:
+      session: 3600
+      product: 300
+      user: 1800
+      cart: 7200
+
+messaging:
+  rabbitmq:
+    host: rabbitmq.internal
+    port: 5672
+    vhost: /ecommerce
+    username: app_user
+    exchanges:
+      - name: orders
+        type: topic
+        durable: true
+      - name: notifications
+        type: fanout
+        durable: true
+      - name: events
+        type: headers
+        durable: true
+    queues:
+      - name: order_processing
+        durable: true
+        prefetch: 10
+      - name: email_notifications
+        durable: true
+        prefetch: 50
+      - name: sms_notifications
+        durable: true
+        prefetch: 20
+
+services:
+  payment:
+    url: https://payment-service.internal
+    timeout: 30
+    retry:
+      max_attempts: 3
+      backoff: exponential
+      initial_delay: 100
+  inventory:
+    url: https://inventory-service.internal
+    timeout: 15
+    circuit_breaker:
+      enabled: true
+      threshold: 5
+      timeout: 60
+  shipping:
+    url: https://shipping-service.internal
+    timeout: 20
+    endpoints:
+      calculate: /api/v1/rates
+      create: /api/v1/shipments
+      track: /api/v1/tracking
+
+logging:
+  level: info
+  format: json
+  outputs:
+    - type: stdout
+      level: info
+    - type: file
+      path: /var/log/app/application.log
+      level: debug
+      rotation:
+        max_size: 100MB
+        max_files: 10
+        compress: true
+    - type: syslog
+      host: logging.internal
+      port: 514
+      level: warn
+  fields:
+    service: ecommerce-api
+    environment: production
+    version: "2.5.0"
+
+monitoring:
+  metrics:
+    enabled: true
+    port: 9090
+    path: /metrics
+    labels:
+      app: ecommerce
+      env: prod
+  tracing:
+    enabled: true
+    sampler: probabilistic
+    sample_rate: 0.1
+    exporter: jaeger
+    endpoint: http://jaeger.internal:14268/api/traces
+  health:
+    enabled: true
+    path: /health
+    detailed: false
+
+security:
+  cors:
+    enabled: true
+    allowed_origins:
+      - https://www.example.com
+      - https://admin.example.com
+      - https://mobile.example.com
+    allowed_methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowed_headers:
+      - Authorization
+      - Content-Type
+      - X-Request-ID
+    max_age: 3600
+  rate_limiting:
+    enabled: true
+    requests_per_second: 100
+    burst: 200
+    by: ip
+  authentication:
+    jwt:
+      issuer: auth.example.com
+      audience: ecommerce-api
+      algorithms:
+        - RS256
+      public_key_url: https://auth.example.com/.well-known/jwks.json
+      cache_ttl: 3600
+
+features:
+  new_checkout: true
+  dark_mode: true
+  beta_features: false
+  a_b_testing:
+    enabled: true
+    experiments:
+      - id: exp_001
+        name: new_product_page
+        variants:
+          - control
+          - variant_a
+          - variant_b
+        allocation:
+          - 34
+          - 33
+          - 33

@@ -1,0 +1,20 @@
+# Small configuration file (~20 lines)
+# Represents a simple application config
+
+app:
+  name: my-service
+  version: "1.2.3"
+  debug: false
+
+server:
+  host: localhost
+  port: 8080
+  timeout: 30
+
+database:
+  url: "postgresql://localhost/mydb"
+  pool_size: 5
+
+logging:
+  level: info
+  format: json

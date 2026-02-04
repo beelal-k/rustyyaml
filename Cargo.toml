@@ -1,0 +1,44 @@
+[package]
+name = "rustyyaml"
+version = "0.1.0"
+edition = "2021"
+authors = ["Bilal <khawajabilal902@gmail.com>"]
+license = "MIT"
+description = "Fast, safe YAML parser for Python (Rust-powered)"
+repository = "https://github.com/beelal-k/rustyyaml"
+readme = "README.md"
+keywords = ["yaml", "parser", "python", "pyo3"]
+categories = ["parser-implementations", "development-tools"]
+
+[lib]
+name = "rustyyaml"
+crate-type = ["cdylib"]
+
+[dependencies]
+# Python bindings
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+# YAML parsing (battle-tested, used by cargo itself)
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+
+# Preserve insertion order in dicts (YAML spec requirement)
+indexmap = "2.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Parallel processing (for batch operations)
+rayon = "1.8"
+
+[dev-dependencies]
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Testing
+proptest = "1.4"
+
+[[bench]]
+name = "parsing"
+harness = false
