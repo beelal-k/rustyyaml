@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "rustyyaml"
-version = "0.1.2"
+version = "0.1.3"
 description = "Fast, safe YAML parser for Python (Rust-powered)"
 authors = [
     {name = "Bilal", email = "khawajabilal902@gmail.com"}
