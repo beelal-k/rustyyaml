@@ -1,4 +1,4 @@
-//! RustyAML: Fast, safe YAML parser for Python
+//! RustyYAML: Fast, safe YAML parser for Python
 //!
 //! This module exposes Rust functions to Python via PyO3
 //!
@@ -93,9 +93,9 @@ fn version() -> &'static str {
 
 /// Python module definition
 ///
-/// This is what Python sees when it does `import rustyaml`
+/// This is what Python sees when it does `import rustyyaml`
 #[pymodule]
-fn rustyaml(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn rustyyaml(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Core functions
     m.add_function(wrap_pyfunction!(safe_load, m)?)?;
     m.add_function(wrap_pyfunction!(unsafe_load, m)?)?;
