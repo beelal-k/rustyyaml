@@ -1,6 +1,6 @@
 [package]
 name = "rustyyaml"
-version = "0.1.3"
+version = "0.1.5"
 edition = "2021"
 authors = ["Bilal <khawajabilal902@gmail.com>"]
 license = "MIT"
