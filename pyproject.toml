@@ -42,7 +42,7 @@ module-name = "rustyyaml.rustyyaml"
 # Build features
 features = ["pyo3/extension-module"]
 
-[tool.pytest.ini_options
+[tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
