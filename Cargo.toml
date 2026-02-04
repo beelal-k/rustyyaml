@@ -15,8 +15,8 @@ name = "rustyyaml"
 crate-type = ["cdylib"]
 
 [dependencies]
-# Python bindings
-pyo3 = { version = "0.22", features = ["extension-module"] }
+# Python bindings - using abi3 for compatibility across Python versions
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
 
 # YAML parsing (battle-tested, used by cargo itself)
 serde = { version = "1.0", features = ["derive"] }
