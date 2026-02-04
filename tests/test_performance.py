@@ -12,7 +12,7 @@ try:
 except ImportError:
     HAS_PYYAML = False
 
-import rustyaml
+import rustyyaml
 
 
 def time_operation(func: Callable, iterations: int = 1000) -> float:
@@ -32,7 +32,7 @@ class TestPerformance:
         yaml_str = "key: value"
 
         rusty_time = time_operation(
-            lambda: rustyaml.safe_load(yaml_str), iterations=10000
+            lambda: rustyyaml.safe_load(yaml_str), iterations=10000
         )
 
         pyyaml_time = time_operation(
@@ -70,7 +70,7 @@ logging:
 """
 
         rusty_time = time_operation(
-            lambda: rustyaml.safe_load(yaml_str), iterations=5000
+            lambda: rustyyaml.safe_load(yaml_str), iterations=5000
         )
 
         pyyaml_time = time_operation(
@@ -90,7 +90,7 @@ logging:
         """Compare large list parsing speed"""
         yaml_str = "\n".join(f"- item{i}" for i in range(1000))
 
-        rusty_time = time_operation(lambda: rustyaml.safe_load(yaml_str), iterations=100)
+        rusty_time = time_operation(lambda: rustyyaml.safe_load(yaml_str), iterations=100)
 
         pyyaml_time = time_operation(lambda: pyyaml.safe_load(yaml_str), iterations=100)
 
@@ -107,12 +107,12 @@ logging:
 
         # Sequential loading
         sequential_time = time_operation(
-            lambda: [rustyaml.safe_load(y) for y in yamls], iterations=10
+            lambda: [rustyyaml.safe_load(y) for y in yamls], iterations=10
         )
 
         # Parallel loading
         parallel_time = time_operation(
-            lambda: rustyaml.safe_load_many(yamls), iterations=10
+            lambda: rustyyaml.safe_load_many(yamls), iterations=10
         )
 
         speedup = sequential_time / parallel_time
@@ -142,7 +142,7 @@ logging:
         """
 
         iterations = 10000
-        elapsed = time_operation(lambda: rustyaml.safe_load(yaml_str), iterations)
+        elapsed = time_operation(lambda: rustyyaml.safe_load(yaml_str), iterations)
 
         ops_per_sec = iterations / elapsed
         print(f"\nRustyAML baseline: {ops_per_sec:.0f} ops/sec")
@@ -202,7 +202,7 @@ spec:
 """
 
         rusty_time = time_operation(
-            lambda: rustyaml.safe_load(yaml_str), iterations=5000
+            lambda: rustyyaml.safe_load(yaml_str), iterations=5000
         )
 
         pyyaml_time = time_operation(
@@ -223,7 +223,7 @@ spec:
 
         for size in sizes:
             yaml_str = "\n".join(f"key{i}: value{i}" for i in range(size))
-            elapsed = time_operation(lambda y=yaml_str: rustyaml.safe_load(y), iterations=100)
+            elapsed = time_operation(lambda y=yaml_str: rustyyaml.safe_load(y), iterations=100)
             times.append(elapsed)
             print(f"\n{size} keys: {elapsed:.4f}s (100 iterations)")
 
@@ -243,14 +243,14 @@ class TestMemoryUsage:
         yaml_str = "\n".join(f"key{i}: {'x' * 100}" for i in range(10000))
 
         # Should complete without memory issues
-        result = rustyaml.safe_load(yaml_str)
+        result = rustyyaml.safe_load(yaml_str)
         assert len(result) == 10000
 
     def test_many_small_documents(self):
         """Parse many small documents"""
         yamls = [f"key: value{i}" for i in range(10000)]
 
-        results = rustyaml.safe_load_many(yamls)
+        results = rustyyaml.safe_load_many(yamls)
         assert len(results) == 10000
 
 

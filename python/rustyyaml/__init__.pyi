@@ -1,4 +1,4 @@
-"""Type stubs for RustyAML"""
+"""Type stubs for RustyYAML"""
 
 from pathlib import Path
 from typing import IO, Any, List, Tuple, Union

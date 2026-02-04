@@ -26,11 +26,11 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    import rustyaml
+    import rustyyaml
     HAS_RUSTYAML = True
 except ImportError:
     HAS_RUSTYAML = False
-    print("ERROR: rustyaml not installed. Run 'maturin develop' first.")
+    print("ERROR: rustyyaml not installed. Run 'maturin develop' first.")
     sys.exit(1)
 
 try:
@@ -511,7 +511,7 @@ def benchmark_yaml_string(
     # RustyAML
     rustyaml_result = run_benchmark(
         name=name,
-        func=lambda: rustyaml.safe_load(yaml_string),
+        func=lambda: rustyyaml.safe_load(yaml_string),
     )
     rustyaml_result.library = "rustyaml"
 
@@ -566,7 +566,7 @@ def benchmark_batch_loading(
     # RustyAML batch (parallel)
     rustyaml_result = run_benchmark(
         name=name,
-        func=lambda: rustyaml.safe_load_many(yaml_strings),
+        func=lambda: rustyyaml.safe_load_many(yaml_strings),
     )
     rustyaml_result.library = "rustyaml"
 
@@ -611,7 +611,7 @@ def benchmark_multi_document(
     # RustyAML
     rustyaml_result = run_benchmark(
         name=name,
-        func=lambda: rustyaml.safe_load_all(yaml_string),
+        func=lambda: rustyyaml.safe_load_all(yaml_string),
     )
     rustyaml_result.library = "rustyaml"
 

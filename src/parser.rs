@@ -229,12 +229,7 @@ false_val: false
                 .unwrap();
             assert!(yes);
 
-            let no: bool = dict
-                .get_item("no_val")
-                .unwrap()
-                .unwrap()
-                .extract()
-                .unwrap();
+            let no: bool = dict.get_item("no_val").unwrap().unwrap().extract().unwrap();
             assert!(!no);
         });
     }

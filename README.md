@@ -1,9 +1,9 @@
-# RustyAML 🦀
+# RustyYAML 🦀
 
 **Fast, safe YAML parser for Python** – A drop-in replacement for PyYAML with 10-100x performance improvement.
 
-[![PyPI version](https://badge.fury.io/py/rustyaml.svg)](https://pypi.org/project/rustyaml/)
-[![CI](https://github.com/yourusername/rustyaml/workflows/CI/badge.svg)](https://github.com/yourusername/rustyaml/actions)
+[![PyPI version](https://badge.fury.io/py/rustyyaml.svg)](https://pypi.org/project/rustyyaml/)
+[![CI](https://github.com/beelal-k/rustyyaml/workflows/CI/badge.svg)](https://github.com/beelal-k/rustyyaml/actions)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
 
 ## Features
@@ -18,7 +18,7 @@
 ## Installation
 
 ```bash
-pip install rustyaml
+pip install rustyyaml
 ```
 
 That's it! No C compiler, no build tools needed.
@@ -26,7 +26,7 @@ That's it! No C compiler, no build tools needed.
 ## Quick Start
 
 ```python
-import rustyaml as yaml
+import rustyyaml as yaml
 
 # Parse YAML string
 data = yaml.safe_load("key: value")
@@ -68,7 +68,7 @@ for filename, data in configs:
 import yaml
 
 # After
-import rustyaml as yaml
+import rustyyaml as yaml
 
 # Rest of your code works unchanged!
 data = yaml.safe_load("key: value")
@@ -78,7 +78,7 @@ data = yaml.safe_load("key: value")
 
 ```python
 # Add this line at the top of your main file
-import rustyaml.compat
+import rustyyaml.compat
 
 # All existing code works unchanged
 import yaml
@@ -93,7 +93,7 @@ Tested on Apple M2, Python 3.11, parsing a Kubernetes manifest 5000 times:
 |---------|------|---------|
 | PyYAML (pure Python) | 12.3s | 1x (baseline) |
 | PyYAML (with LibYAML) | 1.8s | 6.8x |
-| **RustyAML** | **0.4s** | **30x** |
+| **RustyYAML** | **0.4s** | **30x** |
 
 ### Batch Loading Performance
 
@@ -102,7 +102,7 @@ Tested on Apple M2, Python 3.11, parsing a Kubernetes manifest 5000 times:
 | 100 files | 0.8s | 0.2s | 4x |
 | 1000 files | 8.2s | 1.1s | 7.5x |
 
-## Why RustyAML?
+## Why RustyYAML?
 
 ### The Problem
 
@@ -114,7 +114,7 @@ PyYAML is slow because:
 
 ### The Solution
 
-RustyAML:
+RustyYAML:
 1. Written in Rust (compiled to native code)
 2. Uses parallel processing for batch operations
 3. Zero-copy parsing where possible
@@ -123,13 +123,13 @@ RustyAML:
 
 ## Safety
 
-Unlike PyYAML, RustyAML is **secure by default**:
+Unlike PyYAML, RustyYAML is **secure by default**:
 
 ```python
 # This would execute code in PyYAML's unsafe mode
 dangerous = "!!python/object/apply:os.system ['rm -rf /']"
 
-# RustyAML blocks it by default
+# RustyYAML blocks it by default
 yaml.safe_load(dangerous)  # Raises YAMLError: Unsafe tag detected
 
 # Only use unsafe_load() if you completely trust the source
@@ -188,7 +188,7 @@ All loading functions accept:
 ## Error Handling
 
 ```python
-from rustyaml import YAMLError
+from rustyyaml import YAMLError
 
 try:
     data = yaml.safe_load(invalid_yaml)

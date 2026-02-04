@@ -1,10 +1,10 @@
 """
-RustyAML: Fast, safe YAML parser for Python
+RustyYAML: Fast, safe YAML parser for Python
 
 Drop-in replacement for PyYAML with 10-100x performance improvement.
 
 Basic usage:
-    >>> import rustyaml as yaml
+    >>> import rustyyaml as yaml
     >>> data = yaml.safe_load("key: value")
     >>> print(data)
     {'key': 'value'}
@@ -21,15 +21,15 @@ from typing import IO, Any, List, Optional, Tuple, Union
 
 # Import the Rust extension module
 try:
-    from . import rustyaml as _rustyaml
+    from . import rustyyaml as _rustyyaml
 except ImportError as e:
     raise ImportError(
-        "Failed to import rustyaml Rust extension. "
+        "Failed to import rustyyaml Rust extension. "
         "This usually means the package was not installed correctly. "
         f"Error: {e}"
     )
 
-__version__ = _rustyaml.__version__
+__version__ = _rustyyaml.__version__
 __all__ = [
     "safe_load",
     "unsafe_load",
@@ -128,7 +128,7 @@ def safe_load(stream: Union[str, bytes, IO, Path]) -> Any:
     """
     try:
         content = _read_stream(stream)
-        return _rustyaml.safe_load(content)
+        return _rustyyaml.safe_load(content)
     except YAMLError:
         raise
     except Exception as e:
@@ -157,7 +157,7 @@ def unsafe_load(stream: Union[str, bytes, IO, Path]) -> Any:
     """
     try:
         content = _read_stream(stream)
-        return _rustyaml.unsafe_load(content)
+        return _rustyyaml.unsafe_load(content)
     except YAMLError:
         raise
     except Exception as e:
@@ -211,7 +211,7 @@ def load_all(stream: Union[str, bytes, IO, Path]) -> List[Any]:
     """
     try:
         content = _read_stream(stream)
-        return _rustyaml.load_all(content)
+        return _rustyyaml.load_all(content)
     except YAMLError:
         raise
     except Exception as e:
@@ -230,7 +230,7 @@ def load_all_unsafe(stream: Union[str, bytes, IO, Path]) -> List[Any]:
     """
     try:
         content = _read_stream(stream)
-        return _rustyaml.load_all_unsafe(content)
+        return _rustyyaml.load_all_unsafe(content)
     except YAMLError:
         raise
     except Exception as e:
@@ -285,7 +285,7 @@ def safe_load_many(yaml_strings: List[str]) -> List[Any]:
         [{'doc': 1}, {'doc': 2}, {'doc': 3}]
     """
     try:
-        return _rustyaml.safe_load_many(yaml_strings)
+        return _rustyyaml.safe_load_many(yaml_strings)
     except Exception as e:
         raise YAMLError(str(e))
 
@@ -301,7 +301,7 @@ def unsafe_load_many(yaml_strings: List[str]) -> List[Any]:
         List of parsed Python objects
     """
     try:
-        return _rustyaml.unsafe_load_many(yaml_strings)
+        return _rustyyaml.unsafe_load_many(yaml_strings)
     except Exception as e:
         raise YAMLError(str(e))
 
@@ -325,7 +325,7 @@ def load_directory(
         ...     print(f"{filename}: {data}")
     """
     try:
-        return _rustyaml.load_directory(str(directory), recursive)
+        return _rustyyaml.load_directory(str(directory), recursive)
     except Exception as e:
         raise YAMLError(str(e))
 
@@ -344,6 +344,6 @@ def load_directory_unsafe(
         List of (filename, data) tuples
     """
     try:
-        return _rustyaml.load_directory_unsafe(str(directory), recursive)
+        return _rustyyaml.load_directory_unsafe(str(directory), recursive)
     except Exception as e:
         raise YAMLError(str(e))

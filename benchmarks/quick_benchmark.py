@@ -16,9 +16,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
-    import rustyaml
+    import rustyyaml
 except ImportError:
-    print("ERROR: rustyaml not installed. Run 'maturin develop' first.")
+    print("ERROR: rustyyaml not installed. Run 'maturin develop' first.")
     sys.exit(1)
 
 try:
@@ -78,7 +78,7 @@ def run_comparison(name, yaml_content, iterations=1000):
     print(f"{'='*60}")
 
     # RustyAML
-    rusty = benchmark(lambda: rustyaml.safe_load(yaml_content), iterations)
+    rusty = benchmark(lambda: rustyyaml.safe_load(yaml_content), iterations)
     print(f"\n  RustyAML:")
     print(f"    Mean: {format_time(rusty['mean'])}")
     print(f"    Ops/sec: {rusty['ops_per_sec']:,.0f}")
@@ -180,7 +180,7 @@ logging:
     # RustyAML batch
     start = time.perf_counter()
     for _ in range(50):
-        rustyaml.safe_load_many(docs)
+        rustyyaml.safe_load_many(docs)
     rusty_time = (time.perf_counter() - start) / 50
 
     print(f"\n  RustyAML (parallel): {format_time(rusty_time)}")

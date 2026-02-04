@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import rustyaml as yaml
+import rustyyaml as yaml
 
 
 class TestBasicParsing:

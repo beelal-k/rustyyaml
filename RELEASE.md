@@ -1,6 +1,6 @@
-# Publishing RustyAML to PyPI
+# Publishing RustyYAML to PyPI
 
-This guide covers how to publish RustyAML so users can install it with `pip install rustyaml`.
+This guide covers how to publish RustyYAML so users can install it with `pip install rustyyaml`.
 
 ## Table of Contents
 
@@ -44,10 +44,10 @@ Edit `Cargo.toml` and `pyproject.toml` with your actual information:
 ```toml
 # Cargo.toml
 [package]
-name = "rustyaml"
+name = "rustyyaml"
 version = "0.1.0"
 authors = ["Your Real Name <your.email@example.com>"]
-repository = "https://github.com/YOUR_USERNAME/rustyaml"
+repository = "https://github.com/YOUR_USERNAME/rustyyaml"
 ```
 
 ```toml
@@ -58,16 +58,16 @@ authors = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/YOUR_USERNAME/rustyaml"
-Repository = "https://github.com/YOUR_USERNAME/rustyaml"
+Homepage = "https://github.com/YOUR_USERNAME/rustyyaml"
+Repository = "https://github.com/YOUR_USERNAME/rustyyaml"
 ```
 
 ### Step 2: Check Package Name Availability
 
-Before publishing, verify "rustyaml" is available on PyPI:
+Before publishing, verify "rustyyaml" is available on PyPI:
 
 ```bash
-pip index versions rustyaml
+pip index versions rustyyaml
 ```
 
 If the name is taken, you'll need to choose a different name.
@@ -101,9 +101,9 @@ password = pypi-YOUR_TEST_TOKEN_HERE
 
 1. Go to your PyPI account → Publishing
 2. Add a new "pending publisher":
-   - PyPI Project Name: `rustyaml`
+   - PyPI Project Name: `rustyyaml`
    - Owner: `YOUR_GITHUB_USERNAME`
-   - Repository: `rustyaml`
+   - Repository: `rustyyaml`
    - Workflow name: `release.yml`
    - Environment name: `pypi`
 
@@ -112,11 +112,11 @@ This allows GitHub Actions to publish without storing API tokens.
 ### Step 4: Create GitHub Repository
 
 ```bash
-cd rustyaml
+cd rustyyaml
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/rustyaml.git
+git remote add origin https://github.com/YOUR_USERNAME/rustyyaml.git
 git push -u origin main
 ```
 
@@ -165,7 +165,7 @@ The GitHub Action will trigger automatically and publish to PyPI within ~10-15 m
 
 1. Go to Repository → Actions
 2. Watch the "Release" workflow
-3. Once complete, verify at https://pypi.org/project/rustyaml/
+3. Once complete, verify at https://pypi.org/project/rustyyaml/
 
 ### Method 2: Manual Publishing
 
@@ -193,8 +193,8 @@ ls target/wheels/
 twine upload --repository testpypi target/wheels/*.whl
 
 # Test installation
-pip install --index-url https://test.pypi.org/simple/ rustyaml
-python -c "import rustyaml; print(rustyaml.safe_load('key: value'))"
+pip install --index-url https://test.pypi.org/simple/ rustyyaml
+python -c "import rustyyaml; print(rustyyaml.safe_load('key: value'))"
 ```
 
 #### Step 3: Publish to PyPI
@@ -325,11 +325,11 @@ grep "^version" Cargo.toml pyproject.toml
 
 ### "Package name already exists"
 
-The name `rustyaml` might be taken. Check and choose an alternative:
+The name `rustyyaml` might be taken. Check and choose an alternative:
 
 ```bash
-pip index versions rustyaml
-# If taken, try: rustyaml-py, rusty-yaml, etc.
+pip index versions rustyyaml
+# If taken, try: rustyyaml-py, rusty-yaml, etc.
 ```
 
 ### "Invalid wheel filename"
@@ -396,8 +396,8 @@ twine upload target/wheels/*.whl
 
 ### Useful Links
 
-- **PyPI Project**: https://pypi.org/project/rustyaml/
-- **TestPyPI Project**: https://test.pypi.org/project/rustyaml/
+- **PyPI Project**: https://pypi.org/project/rustyyaml/
+- **TestPyPI Project**: https://test.pypi.org/project/rustyyaml/
 - **Maturin Documentation**: https://www.maturin.rs/
 - **PyO3 User Guide**: https://pyo3.rs/
 - **GitHub Actions for Python**: https://packaging.python.org/en/latest/guides/publishing-package-distribution-releases-using-github-actions-ci-cd-workflows/
@@ -409,14 +409,14 @@ twine upload target/wheels/*.whl
 Once published, users can install with:
 
 ```bash
-pip install rustyaml
+pip install rustyyaml
 ```
 
 Verify the release:
 
 ```bash
-pip install rustyaml
-python -c "import rustyaml; print(rustyaml.safe_load('hello: world'))"
+pip install rustyyaml
+python -c "import rustyyaml; print(rustyyaml.safe_load('hello: world'))"
 # Output: {'hello': 'world'}
 ```
 

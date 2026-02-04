@@ -1,10 +1,10 @@
-# RustyAML Benchmarks
+# RustyYAML Benchmarks
 
-This directory contains comprehensive benchmarks comparing RustyAML against PyYAML.
+This directory contains comprehensive benchmarks comparing RustyYAML against PyYAML.
 
 ## Quick Start
 
-First, make sure RustyAML is built and installed:
+First, make sure RustyYAML is built and installed:
 
 ```bash
 # From the rustyaml directory

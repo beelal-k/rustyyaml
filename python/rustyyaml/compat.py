@@ -1,12 +1,12 @@
 """
 PyYAML compatibility layer
 
-Import this module to replace PyYAML with RustyAML globally:
+Import this module to replace PyYAML with RustyYAML globally:
 
-    import rustyaml.compat  # Must be first import
-    import yaml  # This is now RustyAML!
+    import rustyyaml.compat  # Must be first import
+    import yaml  # This is now RustyYAML!
 
-This allows zero-code migration from PyYAML to RustyAML.
+This allows zero-code migration from PyYAML to RustyYAML.
 """
 
 import sys
@@ -114,7 +114,7 @@ def safe_dump_all(*args, **kwargs) -> str:
 def add_constructor(tag, constructor, Loader=None):
     """Add a constructor (not implemented)"""
     raise NotImplementedError(
-        "add_constructor() is not supported in RustyAML. "
+        "add_constructor() is not supported in RustyYAML. "
         "Custom constructors are a security risk."
     )
 
@@ -249,7 +249,7 @@ sys.modules["yaml"] = _yaml_module  # type: ignore
 
 # Warn the user
 warnings.warn(
-    "PyYAML has been replaced with RustyAML via rustyaml.compat. "
+    "PyYAML has been replaced with RustyYAML via rustyyaml.compat. "
     "Some PyYAML features (dump, YAMLObject) are not yet supported.",
     UserWarning,
     stacklevel=2,

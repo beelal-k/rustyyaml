@@ -161,10 +161,20 @@ database:
             let db = dict.get_item("database").unwrap().unwrap();
             let db_dict = db.downcast::<PyDict>().unwrap();
 
-            let host: String = db_dict.get_item("host").unwrap().unwrap().extract().unwrap();
+            let host: String = db_dict
+                .get_item("host")
+                .unwrap()
+                .unwrap()
+                .extract()
+                .unwrap();
             assert_eq!(host, "localhost");
 
-            let port: i64 = db_dict.get_item("port").unwrap().unwrap().extract().unwrap();
+            let port: i64 = db_dict
+                .get_item("port")
+                .unwrap()
+                .unwrap()
+                .extract()
+                .unwrap();
             assert_eq!(port, 5432);
         });
     }

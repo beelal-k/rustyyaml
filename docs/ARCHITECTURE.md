@@ -1,6 +1,6 @@
-# RustyAML Architecture & Flow Diagrams
+# RustyYAML Architecture & Flow Diagrams
 
-This document visualizes the architecture and data flow of RustyAML compared to PyYAML.
+This document visualizes the architecture and data flow of RustyYAML compared to PyYAML.
 
 ## Table of Contents
 
@@ -50,7 +50,7 @@ flowchart TB
     style Optional fill:#f0f0f0,color:#000,stroke-dasharray: 5 5
 ```
 
-### RustyAML Architecture
+### RustyYAML Architecture
 
 ```mermaid
 flowchart TB
@@ -143,7 +143,7 @@ sequenceDiagram
     API-->>User: Result (dict/list)
 ```
 
-### RustyAML Parsing Flow
+### RustyYAML Parsing Flow
 
 ```mermaid
 sequenceDiagram
@@ -215,7 +215,7 @@ flowchart TD
     style BasicTypes fill:#90EE90,color:#000
 ```
 
-### RustyAML Safety Model
+### RustyYAML Safety Model
 
 ```mermaid
 flowchart TD
@@ -307,7 +307,7 @@ sequenceDiagram
     Note over User,PyYAML: Total time = sum of all parse times
 ```
 
-### RustyAML Batch Processing (Parallel)
+### RustyYAML Batch Processing (Parallel)
 
 ```mermaid
 sequenceDiagram
@@ -364,7 +364,7 @@ gantt
     File 51-75   :a3, after a2, 25
     File 76-100  :a4, after a3, 25
     
-    section RustyAML
+    section RustyYAML
     Thread 1 (1-25)   :b1, 0, 7
     Thread 2 (26-50)  :b2, 0, 7
     Thread 3 (51-75)  :b3, 0, 7
@@ -395,7 +395,7 @@ flowchart TB
         PY_Note["All intermediate objects<br/>on Python heap"]
     end
     
-    subgraph Rusty_Mem["RustyAML Memory Usage"]
+    subgraph Rusty_Mem["RustyYAML Memory Usage"]
         R_Input["Input String<br/>(Python → Rust)"]
         R_Parse["serde_yaml Value<br/>(Rust heap)"]
         R_Result["Result Objects<br/>(Python dicts/lists)"]
@@ -432,7 +432,7 @@ pie showData
 
 ```mermaid
 pie showData
-    title "Where Time is Spent - RustyAML"
+    title "Where Time is Spent - RustyYAML"
     "Rust Parsing (serde_yaml)" : 35
     "Safety Checks" : 10
     "Python Object Creation" : 45
@@ -443,11 +443,11 @@ pie showData
 
 ## Component Diagrams
 
-### RustyAML Module Structure
+### RustyYAML Module Structure
 
 ```mermaid
 classDiagram
-    class rustyaml {
+    class rustyyaml {
         +safe_load(yaml: str) → Any
         +safe_load_all(yaml: str) → List
         +unsafe_load(yaml: str) → Any
@@ -591,10 +591,10 @@ flowchart TD
 
 ```mermaid
 mindmap
-    root((RustyAML vs PyYAML))
+    root((RustyYAML vs PyYAML))
         Performance
             PyYAML: Pure Python parsing
-            RustyAML: Native Rust parsing
+            RustyYAML: Native Rust parsing
             Result: 2-10x faster
         
         Safety
@@ -630,4 +630,4 @@ These diagrams are written in [Mermaid](https://mermaid.js.org/) syntax. To view
 
 ---
 
-*Generated for RustyAML v0.1.0*
+*Generated for RustyYAML v0.1.0*

@@ -266,12 +266,7 @@ mod tests {
             // Results should be in the same order as input
             use pyo3::types::PyDict;
             let first = results[0].bind(py).downcast::<PyDict>().unwrap();
-            let val: String = first
-                .get_item("value")
-                .unwrap()
-                .unwrap()
-                .extract()
-                .unwrap();
+            let val: String = first.get_item("value").unwrap().unwrap().extract().unwrap();
             assert_eq!(val, "first");
         });
     }
@@ -311,7 +306,9 @@ mod tests {
     fn test_parallel_loading_large_batch() {
         Python::with_gil(|py| {
             // Create a batch of 100 YAML strings
-            let yamls: Vec<String> = (0..100).map(|i| format!("key_{}: value_{}", i, i)).collect();
+            let yamls: Vec<String> = (0..100)
+                .map(|i| format!("key_{}: value_{}", i, i))
+                .collect();
 
             let results = safe_load_many(py, yamls).unwrap();
             assert_eq!(results.len(), 100);
